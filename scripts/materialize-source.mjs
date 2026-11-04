@@ -98,4 +98,10 @@ for (const [before, after] of replacements) {
   app = app.replace(before, after)
 }
 writeFileSync(appPath, app, 'utf8')
+const envTypesPath = join(root, 'src', 'vite-env.d.ts')
+let envTypes = readFileSync(envTypesPath, 'utf8')
+if (!envTypes.includes('VITE_ADMIN_LOGIN_EMAIL')) {
+  envTypes = envTypes.replace('  readonly VITE_SUPABASE_PUBLISHABLE_KEY: string', '  readonly VITE_SUPABASE_PUBLISHABLE_KEY: string\\n  readonly VITE_ADMIN_LOGIN_EMAIL?: string')
+  writeFileSync(envTypesPath, envTypes, 'utf8')
+}
 console.log('Password-only administrator login configured at /admin; no admin link is rendered on the visitor landing page.')
