@@ -78,3 +78,24 @@ export default defineConfig({
 `
 writeFileSync(join(root, 'vite.config.ts'), optimizedViteConfig, 'utf8')
 console.log('Personal Messenger source materialized with optimized vendor chunks.')
+
+
+// Apply the password-only admin entry and keep it off the visitor landing page.
+const appPath = join(root, 'src', 'App.tsx')
+let app = readFileSync(appPath, 'utf8')
+const replacements = [
+  ["const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined", "const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined\nconst adminLoginEmail = import.meta.env.VITE_ADMIN_LOGIN_EMAIL as string | undefined"],
+  ["    const email = String(form.get('email') || '').trim()\n    const password = String(form.get('password') || '')", "    const password = String(form.get('password') || '')\n    const email = adminLoginEmail?.trim() || ''\n    if (!email) { setAdminError('Konfigurasi login administrator belum tersedia.'); return }"],
+  ["onOwner={() => navigate('owner-login')} toasts={toasts}", "toasts={toasts}"],
+  ["  if (path.startsWith('/owner/chat/')) return 'owner-chat'\n  if (path === '/owner/inbox' || path === '/owner' || path.startsWith('/owner/')) return path === '/owner' ? 'owner-login' : 'owner-inbox'", "  if (path.startsWith('/admin/chat/')) return 'owner-chat'\n  if (path === '/admin/inbox' || path === '/admin' || path.startsWith('/admin/')) return path === '/admin' ? 'owner-login' : 'owner-inbox'\n  if (path.startsWith('/owner/chat/')) return 'owner-chat'\n  if (path === '/owner/inbox' || path === '/owner' || path.startsWith('/owner/')) return path === '/owner' ? 'owner-login' : 'owner-inbox'"],
+  ["'owner-login': '/owner', 'owner-inbox': '/owner/inbox', 'owner-chat': '/owner/inbox'", "'owner-login': '/admin', 'owner-inbox': '/admin/inbox', 'owner-chat': '/admin/inbox'"],
+  ["function Welcome({ visitorName, setVisitorName, busy, onSubmit, onOwner, toasts }: {\n  visitorName: string; setVisitorName: (v: string) => void; busy: boolean; onSubmit: (e: FormEvent) => void; onOwner: () => void; toasts: Toast[]", "function Welcome({ visitorName, setVisitorName, busy, onSubmit, toasts }: {\n  visitorName: string; setVisitorName: (v: string) => void; busy: boolean; onSubmit: (e: FormEvent) => void; toasts: Toast[]"],
+  ["<header className=\"welcome-header\"><Brand /><button className=\"text-button\" onClick={onOwner}><LockKeyhole size={15} /> Administrator</button></header>", "<header className=\"welcome-header\"><Brand /></header>"],
+  ["<form className=\"owner-form\" onSubmit={onSubmit}><label className=\"field-label\" htmlFor=\"owner-email\">EMAIL ADMIN</label><input id=\"owner-email\" name=\"email\" type=\"email\" className=\"text-input\" autoComplete=\"username\" required placeholder=\"admin@example.com\" />\n      <label className=\"field-label\" htmlFor=\"owner-password\">PASSWORD</label>", "<form className=\"owner-form\" onSubmit={onSubmit}><label className=\"field-label\" htmlFor=\"owner-password\">PASSWORD</label>"]
+]
+for (const [before, after] of replacements) {
+  if (!app.includes(before)) throw new Error('Expected admin-login source fragment not found: ' + before.slice(0, 90))
+  app = app.replace(before, after)
+}
+writeFileSync(appPath, app, 'utf8')
+console.log('Password-only administrator login configured at /admin; no admin link is rendered on the visitor landing page.')
